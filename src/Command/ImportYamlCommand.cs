@@ -17,7 +17,7 @@ namespace Microsoft.PowerShell.PlatyPS
     /// Import a yaml command help file.
     /// </summary>
     [Cmdlet(VerbsData.Import, "YamlCommandHelp", HelpUri = "", DefaultParameterSetName = "FromPath")]
-    [OutputType(typeof(Dictionary<object, object>))]
+    [OutputType(typeof(object))]
     public sealed class ImportYamlMetadataCommand : PSCmdlet
     {
         #region cmdlet parameters
@@ -25,11 +25,7 @@ namespace Microsoft.PowerShell.PlatyPS
         /// <summary>
         /// An array of paths to get the markdown metadata from.
         /// </summary>
-        [Parameter(
-            Mandatory = true,
-            ParameterSetName = "FromPath",
-            ValueFromPipelineByPropertyName = true,
-            Position = 0)]
+        [Parameter(Mandatory = true, ParameterSetName = "FromPath", ValueFromPipelineByPropertyName = true, ValueFromPipeline = true, Position = 0)]
         [SupportsWildcards]
         public string[] Path { get; set; } = Array.Empty<string>();
 
@@ -54,7 +50,7 @@ namespace Microsoft.PowerShell.PlatyPS
             {
                 if (Yaml is not null)
                 {
-                    var result = yamlDeserializer?.Deserialize<CommandHelp>(Yaml);
+                    var result = yamlDeserializer?.Deserialize<Dictionary<object,object>>(Yaml);
                     WriteObject(result);
                 }
             }
@@ -66,12 +62,77 @@ namespace Microsoft.PowerShell.PlatyPS
 
                     foreach (var resolvedPath in resolvedPaths)
                     {
-                        var result = yamlDeserializer?.Deserialize<object>(File.ReadAllText(resolvedPath.Path));
-                        // TODO: this should really be a CommandHelp object, but that has yet to be coded.
-                        WriteObject(result);
+                        var result = yamlDeserializer?.Deserialize<IDictionary<object,object>>(File.ReadAllText(resolvedPath.Path));
+                        if (result is not null)
+                        {
+                            // WriteObject(result);
+                            WriteObject(ConvertDictionaryToCommandHelp(result));
+                        }
+                        else
+                        {
+                            WriteWarning($"The file {resolvedPath.Path} is not a valid yaml file.");
+                        }
                     }
                 }
             }
         }
+
+        string[] requiredKeys = new string[] { "metadata", "title", "synopsis", "syntaxes", "aliases", "description", "examples", "parameters", "inputs", "outputs", "notes", "links" };
+
+        internal CommandHelp ConvertDictionaryToCommandHelp(IDictionary<object, object> commandHelp)
+        {
+            CommandHelp help = GetCommandHelp(commandHelp);
+            return help;
+
+        }
+
+        private CommandHelp GetCommandHelp(IDictionary<object, object> commandHelp)
+        {
+            bool ok = true;
+            foreach (var key in requiredKeys)
+            {
+                if (!commandHelp.ContainsKey(key))
+                {
+                    WriteWarning($"The yaml file does not contain the required key {key}.");
+                    ok = false;
+                }
+            }   
+
+            if (! ok)
+            {
+                throw new ArgumentException("The yaml file does not contain all the required keys.");
+            }
+
+            if (commandHelp["metadata"] is not IDictionary<object, object> metadata)
+            {
+                throw new ArgumentException("The yaml file does not contain a metadata key.");
+            }
+
+            if (! (metadata.ContainsKey("Locale") && metadata.ContainsKey("title") && metadata.ContainsKey("Module Name")))
+            {
+                throw new ArgumentException("The yaml file does not contain a locale key.");
+            }
+
+            System.Globalization.CultureInfo cultureInfo = System.Globalization.CultureInfo.GetCultureInfo(metadata["Locale"].ToString());
+            CommandHelp help = new CommandHelp(metadata["title"].ToString(), metadata["Module Name"].ToString(), cultureInfo);
+
+            if (commandHelp.ContainsKey("synopsis"))
+            {
+                help.Synopsis = commandHelp["synopsis"].ToString();
+            }
+
+            if (commandHelp.ContainsKey("description"))
+            {
+                help.Description = commandHelp["description"].ToString();
+            }
+
+            if (commandHelp.ContainsKey("notes"))
+            {
+                help.Notes = commandHelp["notes"].ToString();
+            }
+
+            return help;
+        }   
     }
+
 }
