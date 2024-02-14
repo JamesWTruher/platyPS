@@ -38,7 +38,7 @@ namespace Microsoft.PowerShell.PlatyPS.YamlWriter
 
         internal override void WriteMetadataHeader(CommandHelp? help, Hashtable? metadata = null)
         {
-            sb.AppendLine("metadata:"); // Constants.YamlHeader);
+            sb.AppendLine("metadata:");
 
             if (help?.Metadata is null && metadata is null)
             {
@@ -312,10 +312,6 @@ namespace Microsoft.PowerShell.PlatyPS.YamlWriter
                     sb.AppendLine(string.Format("- text: '{0}'", link.LinkText));
                     sb.AppendLine(string.Format("  href: {0}", link.Uri));
                 }
-            }
-            else
-            {
-                sb.AppendLine(Constants.FillInRelatedLinks);
             }
         }
     }

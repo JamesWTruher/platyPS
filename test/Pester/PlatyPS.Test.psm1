@@ -94,7 +94,7 @@ function Import-CommandYaml  {
                 $result = $YamlDeserializeMethod.Invoke($yamldes, $yaml)
             }
             catch {
-                Write-Warning "Failed to parse $yamlFile"
+                Write-Warning "Failed to parse $yamlFile ($_)"
                 return
             }
 
