@@ -8,8 +8,10 @@ $markDigAsm = Join-Path $depRoot "Markdig.Signed.dll"
 $yamlDotNetAsm = Join-Path $depRoot "YamlDotNet.dll"
 # debugging
 Get-ChildItem -Recurse $modRoot -File | Foreach-Object { $_ | Write-Verbose -Verbose }
-$null = import-Module $markDigAsm -ErrorAction SilentlyContinue
-$null = import-Module $yamlDotNetAsm -ErrorAction SilentlyContinue
+#$null = import-Module $markDigAsm -ErrorAction SilentlyContinue
+#$null = import-Module $yamlDotNetAsm -ErrorAction SilentlyContinue
+Add-Type -Assembly $markDigAsm -ErrorAction Stop
+Add-Type -Assembly $yamlDotNetAsm -ErrorAction Stop
 
 class inputOutput {
     [string]$name

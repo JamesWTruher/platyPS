@@ -38,6 +38,7 @@ namespace Microsoft.PowerShell.PlatyPS.YamlWriter
 
         internal override void WriteMetadataHeader(CommandHelp help, Hashtable? metadata = null)
         {
+            string[] requiredMetadata = new string[] { "external help file", "Module Name", "online version", "title", "aliases" };
             sb.AppendLine("metadata:");
 
             if (help?.Metadata is null && metadata is null)
@@ -46,6 +47,7 @@ namespace Microsoft.PowerShell.PlatyPS.YamlWriter
                 sb.AppendLine($"  Module Name: {help?.ModuleName}");
                 sb.AppendLine($"  online version: {help?.OnlineVersionUrl}");
                 sb.AppendLine($"  title: {help?.Title}");
+                sb.AppendLine($"  aliases: {help?.Aliases}");
                 sb.AppendLine(Constants.SchemaVersionYaml);
                 return;
             }
@@ -63,6 +65,16 @@ namespace Microsoft.PowerShell.PlatyPS.YamlWriter
                     {
                         sb.AppendLine($"  {item.Key}: {item.Value}");
                     }
+                }
+
+                if (!help.Metadata.Contains("aliases"))
+                {
+                    string aliasString = string.Empty;
+                    if (help.Aliases?.Count > 0)
+                    {
+                        aliasString = string.Join(", ", help.Aliases);
+                    }
+                    sb.AppendLine($"  aliases: {aliasString}");
                 }
             }
 
