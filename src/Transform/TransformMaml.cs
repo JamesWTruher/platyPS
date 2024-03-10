@@ -154,7 +154,10 @@ namespace Microsoft.PowerShell.PlatyPS
                     {
                         examples.Add(ReadExample(reader.ReadSubtree(), exampleCounter));
 
-                        reader.ReadEndElement();
+                        if (! reader.IsEmptyElement)
+                        {
+                            reader.ReadEndElement();
+                        }
 
                         exampleCounter++;
                     } while (reader.ReadToNextSibling(Constants.MamlCommandExampleTag));
@@ -194,7 +197,7 @@ namespace Microsoft.PowerShell.PlatyPS
                         } while (reader.ReadToNextSibling(Constants.MamlParaTag));
                     }
 
-                    if (reader.ReadState != ReadState.EndOfFile)
+                    if (reader.ReadState != ReadState.EndOfFile && ! reader.IsEmptyElement)
                     {
                         reader.ReadEndElement();
                     }

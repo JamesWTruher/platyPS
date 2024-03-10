@@ -38,6 +38,23 @@ Describe 'New-MarkdownHelp' {
         }
     }
 
+    Context "default metadata" {
+        BeforeAll {
+            $expectedKeys = @{ name = "title"; value = "New-MarkdownHelp" }, @{ name = "Module Name"; value = "platyPS" }, @{ name = "Locale"; value = (Get-Culture).Name },
+                @{ name = "schema"; value = "2.0.0" }, @{ name = "online version" }, @{ name = "ms.date"; value = [datetime]::now.ToString("MM/dd/yyyy") }, @{ name = "external help file" }
+            $file = New-MarkdownHelp -command New-MarkdownHelp -OutputFolder $TestDrive
+            $ch = Import-MarkdownCommandHelp $file.FullName
+        }
+
+        It "includes the expected key '<name>' and proper value '<value>' when known" -testc $expectedKeys {
+            param ($name, $value)
+            $ch.Metadata.Contains($name) | Should -Be $true
+            if ($value) {
+                $ch.Metadata["$name"] | Should -Be $value
+            }
+        }
+    }
+
     Context 'metadata' {
         It 'generates passed metadata' {
             $customMetadata = $defaultMetadata
@@ -413,19 +430,18 @@ Write-Host 'Hello World!'
             $null = New-Item -ItemType Directory $OutputFolder
         }
 
-        It "generates a landing page from Module" -Pending:$IsMacOS {
+        It "generates a landing page from Module" {
             New-MarkdownHelp -Module PlatyPS -OutputFolder $OutputFolder -WithModulePage -Force
             "$OutputFolder/platyPS.md" | Should -Exist
         }
 
-        It "generates a landing page from MAML" -Pending {
-            New-MarkdownHelp -MamlFile (Get-ChildItem "$outFolder/platyPS/en-US/platy*xml") `
-                        -OutputFolder $OutputFolder `
-                        -WithModulePage `
-                        -ModuleName "PlatyPS" `
-                        -Force
+        It "generates a landing page from MAML" {
+            $mamlDir = (New-Item -Force -Type Directory "$outputFolder/Maml").FullName
+            $mamlPath = Join-Path $mamlDir PlatyPS platyPS-help.xml
+            Import-MarkdownCommandHelp "$outputFolder/*-*.md" | Export-MamlCommandHelp -outputfile "${mamlPath}"
+            New-MarkdownHelp -MamlFile $mamlPath -OutputFolder $mamlDir -WithModulePage -ModuleName "PlatyPS" -Force
 
-            $LandingPage = Get-ChildItem (Join-Path $OutputFolder PlatyPS.md)
+            $LandingPage = Join-Path $mamlDir PlatyPS.md
             $LandingPage | Should -Exist
         }
 

@@ -4,8 +4,10 @@
 using System;
 using System.Collections;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 
@@ -189,7 +191,11 @@ namespace Microsoft.PowerShell.PlatyPS
                 {
                     var settings = new CommandHelpWriterSettings(Encoding, $"{fullPath}{Constants.DirectorySeparator}{cmdletHelp.Title}.md");
                     using var cmdWrt = new CommandHelpMarkdownWriter(settings);
-                    WriteObject(cmdWrt.Write(cmdletHelp, Metadata));
+                    if (Metadata is null && ! NoMetadata)
+                    {
+                        Metadata = GetBaseMetadata(cmdletHelp.Title, cmdletHelp.ModuleName, cmdletHelp.Locale);
+                    }
+                    WriteObject(this.InvokeProvider.Item.Get(cmdWrt.Write(cmdletHelp, Metadata).FullName));
                 }
 
                 if (WithModulePage)
@@ -201,9 +207,22 @@ namespace Microsoft.PowerShell.PlatyPS
                     var modulePageSettings = new CommandHelpWriterSettings(Encoding, resolvedPathModulePagePath);
                     using var modulePageWriter = new ModulePageWriter(modulePageSettings);
 
-                    WriteObject(modulePageWriter.Write(cmdHelpObjs));
+                    WriteObject(this.InvokeProvider.Item.Get(modulePageWriter.Write(cmdHelpObjs).FullName));
                 }
             }
+        }
+
+        static Hashtable GetBaseMetadata(string commandName, string moduleName, CultureInfo locale)
+        {
+            var metadata = new Hashtable();
+            metadata.Add("title", commandName);
+            metadata.Add("Module Name", moduleName);
+            metadata.Add("Locale", locale.Name);
+            metadata.Add("schema", "2.0.0");
+            metadata.Add("online version", "");
+            metadata.Add("ms.date", DateTime.Now.ToString("MM/dd/yyyy"));
+            metadata.Add("external help file", $"{moduleName}.dll-Help.xml");
+            return metadata;
         }
     }
 }
