@@ -37,9 +37,11 @@ namespace Microsoft.PowerShell.PlatyPS
 
         #endregion
 
-        protected override void EndProcessing()
+        private string fullPath = string.Empty;
+
+        protected override void BeginProcessing()
         {
-            string fullPath = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(OutputFolder);
+            fullPath = this.SessionState.Path.GetUnresolvedProviderPathFromPSPath(OutputFolder);
 
             if (File.Exists(fullPath))
             {
@@ -52,8 +54,10 @@ namespace Microsoft.PowerShell.PlatyPS
             {
                 Directory.CreateDirectory(fullPath);
             }
+        }
 
-
+        protected override void ProcessRecord()
+        {
             foreach (object o in Command)
             {
                 if (o is CommandHelp cmdletHelp)
