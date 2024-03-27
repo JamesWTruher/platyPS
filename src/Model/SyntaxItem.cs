@@ -64,13 +64,15 @@ namespace Microsoft.PowerShell.PlatyPS.Model
                 return;
             }
 
-            AddParameterToSyntaxParameter(parameter);
+            // AddParameterToSyntaxParameter(parameter);
             _parameterNames.Add(name);
 
             // First see if the parameter is positional
 
+            /*
             int position = int.MinValue;
 
+            JWT
             if (int.TryParse(parameter.Position, out position))
             {
                 // This can throw because the position is already in the list.
@@ -89,10 +91,12 @@ namespace Microsoft.PowerShell.PlatyPS.Model
                 _requiredParameters.Add(name, parameter);
                 return;
             }
+            */
 
             _alphabeticOrderParameters.Add(name, parameter);
         }
 
+        /*
         public void AddParameterToSyntaxParameter(Parameter parameter)
         {
             bool isPositional = false;
@@ -116,6 +120,7 @@ namespace Microsoft.PowerShell.PlatyPS.Model
                 );
             }
         }
+        */
 
         private string GetFormattedSyntaxParameter(string paramName, string paramTypeName, bool isPositional, bool isRequired)
         {

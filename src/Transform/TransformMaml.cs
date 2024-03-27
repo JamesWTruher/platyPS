@@ -404,7 +404,8 @@ namespace Microsoft.PowerShell.PlatyPS
                             minKey--;
                         }
 
-                        parameter.Position = minKey.ToString();
+                        // JWT
+                        parameter.ParameterSets.ForEach(x => x.Position = minKey.ToString());
                         try
                         {
                             syntaxItem.AddParameter(parameter);
@@ -524,14 +525,15 @@ namespace Microsoft.PowerShell.PlatyPS
                 }
             }
 
-            Parameter parameter = new Parameter(name, type, position);
+            // Parameter parameter = new Parameter(name, type, position);
+            Parameter parameter = new Parameter(name, type);
             parameter.DefaultValue = defaultValue;
             parameter.AddAcceptedValueRange(acceptedValues);
             parameter.Description = description;
-            parameter.Required = required;
+            parameter.ParameterSets.ForEach(x => x.IsRequired = required); // JWT
             parameter.VariableLength = variableLength;
             parameter.Globbing = globbing;
-            parameter.PipelineInput = new PipelineInputInfo(pipelineInput);
+            // JWT parameter.PipelineInput = new PipelineInputInfo(pipelineInput);
             parameter.Aliases = aliases;
 
             // need to go the end of command:parameter
@@ -541,6 +543,8 @@ namespace Microsoft.PowerShell.PlatyPS
             }
 
             // Update parameter.ParameterSets only if we are reading for parameters. Not for syntax.
+            /*
+            JWT
             if (parameterSetCount != -1)
             {
                 if (_paramSetMap.TryGetValue(name, out List<string>? paramSetList))
@@ -556,6 +560,7 @@ namespace Microsoft.PowerShell.PlatyPS
                     }
                 }
             }
+            */
 
             return parameter;
         }

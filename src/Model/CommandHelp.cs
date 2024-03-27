@@ -144,9 +144,9 @@ namespace Microsoft.PowerShell.PlatyPS.Model
         internal void AddParameter(Parameter parameter)
         {
             Parameters.Add(parameter);
-            foreach(var parameterSetName in parameter.ParameterSets)
+            foreach(var parameterSet in parameter.ParameterSets)
             {
-                if (string.Compare(parameterSetName, "(All)", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Compare(parameterSet.Name, "(All)", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     foreach(var syntax in SyntaxDictionary.Values)
                     {
@@ -160,7 +160,7 @@ namespace Microsoft.PowerShell.PlatyPS.Model
                         }
                     }
                 }
-                else if (SyntaxDictionary.TryGetValue(parameterSetName, out var syntaxItem))
+                else if (SyntaxDictionary.TryGetValue(parameterSet.Name, out var syntaxItem))
                 {
                     try
                     {

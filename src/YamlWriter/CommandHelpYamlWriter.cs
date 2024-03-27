@@ -234,8 +234,9 @@ namespace Microsoft.PowerShell.PlatyPS.YamlWriter
                         }
                     }
                     sb.AppendLine(string.Format("  defaultValue: {0}", param.DefaultValue ?? "None"));
-                    sb.AppendLine(string.Format("  pipelineInput: {0}", param.PipelineInput));
-                    sb.AppendLine(string.Format("  position: \"{0}\"", param.Position));
+                    // JWT replace this with serialization of shadow parameter object
+                    // sb.AppendLine(string.Format("  pipelineInput: {0}", param.PipelineInput));
+                    // sb.AppendLine(string.Format("  position: \"{0}\"", param.Position));
                     sb.AppendLine(string.Format("  aliases: {0}", param.Aliases));
                     sb.AppendLine(string.Format("  parameterValueGroup: \"{0}\"", string.Empty)); // ????
                 }

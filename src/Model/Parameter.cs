@@ -19,8 +19,6 @@ namespace Microsoft.PowerShell.PlatyPS.Model
 
         public string? DefaultValue { get; set;}
 
-        public bool Required { get; set; }
-
         private List<string>? RequiredTrueParameterSets { get; set; }
         private List<string>? RequiredFalseParameterSets { get; set; }
 
@@ -29,29 +27,25 @@ namespace Microsoft.PowerShell.PlatyPS.Model
 
         public bool Globbing { get; set;}
 
-        public PipelineInputInfo PipelineInput { get; set;}
-
-        public string Position { get; set;}
 
         public string? Aliases { get; set;}
 
-        public List<string> ParameterSets { get; private set;}
-
+        public List<ParameterSet> ParameterSets { get; set; }
         public bool DontShow { get; set;}
 
         public List<string>? AcceptedValues { get; private set; }
 
         public string? HelpMessage { get; set; }
 
-        public Parameter(string name,
-                         string type,
-                         string position)
+        public Parameter(string name, string type)
         {
             Name = name;
             Type = type;
-            Position = position;
+            // Position = position;
             ParameterSets = new();
-            PipelineInput = new PipelineInputInfo(false);
+            // var ps = new ParameterSet("All");
+            // ParameterSets.Add(ps);
+            // PipelineInput = new PipelineInputInfo(false);
         }
 
         public void AddRequiredParameterSetsRange(bool required, IEnumerable<string> parameterSetNames)
@@ -101,21 +95,22 @@ namespace Microsoft.PowerShell.PlatyPS.Model
             AcceptedValues.AddRange(values);
         }
 
+        /*
         public void AddParameterSet(string parameterSetName)
         {
             if (string.Equals(parameterSetName, "__AllParameterSets", StringComparison.OrdinalIgnoreCase))
             {
-                ParameterSets.Add(Constants.ParameterSetsAll);
+                ParameterSet.Add(Constants.ParameterSetsAll);
             }
             else
             {
-                ParameterSets.Add(parameterSetName);
+                ParameterSet.Add(parameterSetName);
             }
         }
 
-        public void AddParameterSetsRange(IEnumerable<string> values)
+        public void AddParameterSetRange(IEnumerable<string> values)
         {
-            ParameterSets.AddRange(values);
+            ParameterSet.AddRange(values);
         }
 
         internal string ToParameterString(string fmt)
@@ -181,6 +176,7 @@ namespace Microsoft.PowerShell.PlatyPS.Model
                 return Required ? Constants.TrueString : Constants.FalseString;
             }
         }
+        */
 
         public bool Equals(Parameter other)
         {
@@ -192,16 +188,13 @@ namespace Microsoft.PowerShell.PlatyPS.Model
             return (
                 string.Compare(Name, other.Name, StringComparison.CurrentCulture) == 0 &&
                 string.Compare(Type, other.Type, StringComparison.CurrentCulture) == 0 &&
-                string.Compare(Position, other.Position, StringComparison.CurrentCulture) == 0 &&
                 string.Compare(Description, other.Description, StringComparison.CurrentCulture) == 0 &&
                 string.Compare(Aliases, other.Aliases, StringComparison.CurrentCulture) == 0 &&
                 string.Compare(DefaultValue, other.DefaultValue, StringComparison.CurrentCulture) == 0 &&
                 string.Compare(HelpMessage, other.HelpMessage, StringComparison.CurrentCulture) == 0 &&
-                Required == other.Required &&
                 VariableLength == other.VariableLength &&
                 Globbing == other.Globbing &&
                 DontShow == other.DontShow &&
-                PipelineInput == other.PipelineInput &&
                 ParameterSets.SequenceEqual(other.ParameterSets) &&
                 (AcceptedValues is null && other.AcceptedValues is null || AcceptedValues.SequenceEqual(other.AcceptedValues))
             );
@@ -224,7 +217,7 @@ namespace Microsoft.PowerShell.PlatyPS.Model
 
         public override int GetHashCode()
         {
-            return (Name, Type, Position, Description, Aliases, DefaultValue, HelpMessage, Required, VariableLength, Globbing, DontShow, PipelineInput, ParameterSets, AcceptedValues).GetHashCode();
+            return (Name, Type, Description, Aliases, DefaultValue, HelpMessage, VariableLength, Globbing, DontShow, ParameterSets, AcceptedValues).GetHashCode();
         }
 
         public static bool operator ==(Parameter parameter1, Parameter parameter2)

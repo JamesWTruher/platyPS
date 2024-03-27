@@ -1045,7 +1045,7 @@ namespace Microsoft.PowerShell.PlatyPS
                 string description = GetParameterDescription(markdownContent, parameterItemIndex + 1, yamlBlockIndex);
 
                 var paramYamlBlock = GetParameterYamlBlock(md, parameterItemIndex + 1, language: "yaml");
-                Dictionary<string, string> yamlDict;
+                Dictionary<string, object> yamlDict;
 
                 if (paramYamlBlock != null)
                 {
@@ -1067,61 +1067,93 @@ namespace Microsoft.PowerShell.PlatyPS
                         diagnostics.Add(
                             new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Error, "YAML Parse Failure", md[parameterItemIndex].Line + 1)
                         );
-                        yamlDict = new Dictionary<string, string>();
+                        yamlDict = new Dictionary<string, object>();
                     }
                 }
                 else
                 {
-                    yamlDict = new Dictionary<string, string>();
+                    yamlDict = new Dictionary<string, object>();
                 }
 
-                if (! yamlDict.TryGetValue("Type", out string typeAsString))
+                string typeAsString = string.Empty;
+                if (yamlDict.TryGetValue("Type", out object type))
                 {
-                    typeAsString = string.Empty;
+                    typeAsString = type.ToString();
                 }
 
-                if (! yamlDict.TryGetValue("Position", out string positionAsString))
-                {
-                    positionAsString = string.Empty;
-                }
-
-                Parameter parameter = new Parameter(parameterName, typeAsString.Trim(), positionAsString.Trim());
+                Parameter parameter = new Parameter(parameterName, typeAsString.Trim());
                 diagnostics.Add(
                         new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Information, "GetParameters", md[parameterItemIndex].Line)
                     );
 
-                if (yamlDict.TryGetValue("Parameter Sets", out string parameterSetsAsString))
+                // Version 1 style
+                string positionAsString = string.Empty;
+                if (yamlDict.TryGetValue("Position", out object position))
                 {
+                    positionAsString = position.ToString();
+                }
+
+                // Old Style - V1 output
+                string parameterSetsAsString = string.Empty;
+                if (yamlDict.TryGetValue("Parameter Sets", out object parameterSets))
+                {
+                    if (parameterSets is IDictionary)
+                    {
+
+                    }
+
+                    parameterSetsAsString = parameterSets.ToString();
                     if (string.Equals(parameterSetsAsString, Constants.ParameterSetsAll, StringComparison.OrdinalIgnoreCase))
                     {
-                        parameter.ParameterSets.Add(Constants.ParameterSetsAll);
+                        parameter.ParameterSets.Add(new ParameterSet(Constants.ParameterSetsAll));
                     }
                     else
                     {
-                        parameter.ParameterSets.AddRange(parameterSetsAsString.Trim().Split(',').Select(x => x.Trim()).ToArray());
+                        string[] pSetNames = parameterSetsAsString.Trim().Split(',').Select(x => x.Trim()).ToArray();
+                        foreach(string pSetName in pSetNames)
+                        {
+                            parameter.ParameterSets.Add(new ParameterSet(pSetName));
+                        }
                     }
                 }
 
-                if(yamlDict.TryGetValue("Aliases", out string aliasesAsString))
+                string aliasesAsString = string.Empty;
+                if(yamlDict.TryGetValue("Aliases", out object aliases))
                 {
+                    aliasesAsString = aliases.ToString();
                     parameter.Aliases = aliasesAsString.Trim();
                 }
 
-                if (yamlDict.TryGetValue("Accepted values", out string acceptedValuesAsString))
+                string acceptedValuesAsString = string.Empty;
+                if (yamlDict.TryGetValue("Accepted values", out object acceptedValues))
                 {
+                    acceptedValuesAsString = acceptedValues.ToString();
                     parameter.AddAcceptedValueRange(acceptedValuesAsString.Split(Constants.Comma).Select(x => x.Trim()).ToArray());
                 }
 
-                if (yamlDict.TryGetValue("Required", out string requiredAsString))
+                if (yamlDict.TryGetValue("Required", out object requiredValue))
                 {
-                    parameter.Required = string.Equals(requiredAsString.Trim(), Constants.TrueString, StringComparison.OrdinalIgnoreCase);
+                    bool isRequired;
+                    if(!bool.TryParse(requiredValue.ToString(), out isRequired))
+                    {
+                        isRequired = false;
+                    }
+                    parameter.ParameterSets.ForEach(x => x.IsRequired = isRequired);
+                }
+                else
+                {
+                    parameter.ParameterSets.ForEach(x => x.IsRequired = false);
                 }
 
-                if (yamlDict.TryGetValue("Default value", out string defaultValuesAsString))
+                string defaultValuesAsString = string.Empty;
+                if (yamlDict.TryGetValue("Default value", out object defaultValues))
                 {
-                    parameter.DefaultValue = defaultValuesAsString.Trim();
+                    defaultValuesAsString = defaultValues.ToString().Trim();
                 }
+                parameter.DefaultValue = defaultValuesAsString;
 
+                /*
+                JWT
                 if (yamlDict.TryGetValue("Accept pipeline input", out string acceptedPipelineAsString))
                 {
                     parameter.PipelineInput = GetPipelineInputInfoFromString(acceptedPipelineAsString); //new PipelineInputInfo(string.Equals(acceptedPipelineAsString.Trim(), Constants.TrueString, StringComparison.OrdinalIgnoreCase));
@@ -1132,6 +1164,7 @@ namespace Microsoft.PowerShell.PlatyPS
                     parameter.Globbing = string.Equals(acceptWildCardAsString.Trim(), Constants.TrueString, StringComparison.OrdinalIgnoreCase);
 
                 }
+                */
 
                 parameter.Description = description.Trim();
                 parameters.Add(parameter);
@@ -1167,9 +1200,9 @@ namespace Microsoft.PowerShell.PlatyPS
             return new PipelineInputInfo(false);
         }
 
-        private static Dictionary<string, string> parseYamlBlock(object? parsedYamlObject)
+        private static Dictionary<string, object> parseYamlBlock(object? parsedYamlObject)
         {
-            Dictionary<string, string> metadataHeader = new Dictionary<string, string>();
+            Dictionary<string, object> metadataHeader = new Dictionary<string, object>();
             if (parsedYamlObject is null)
             {
                 return metadataHeader;
