@@ -27,7 +27,6 @@ namespace Microsoft.PowerShell.PlatyPS.Model
 
         public bool Globbing { get; set;}
 
-
         public string? Aliases { get; set;}
 
         public List<ParameterSet> ParameterSets { get; set; }
