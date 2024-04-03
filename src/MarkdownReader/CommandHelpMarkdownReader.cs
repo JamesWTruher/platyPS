@@ -21,6 +21,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Management.Automation.Language;
 
 namespace Microsoft.PowerShell.PlatyPS
 {
@@ -518,10 +519,10 @@ namespace Microsoft.PowerShell.PlatyPS
                 if (markdownContent.Take() is HeadingBlock syntaxBlock)
                 {
                     string parameterSetName = GetParameterSetName(syntaxBlock);
-                    bool isDefault = parameterSetName.EndsWith("(default)", StringComparison.OrdinalIgnoreCase);
+                    bool isDefault = parameterSetName.EndsWith(Constants.DefaultString, StringComparison.OrdinalIgnoreCase);
                     if (isDefault)
                     {
-                        parameterSetName = parameterSetName.Replace("(Default)", string.Empty).Trim();
+                        parameterSetName = parameterSetName.Replace(Constants.DefaultString, string.Empty).Trim();
                     }
 
                     if (markdownContent.GetCurrent() is FencedCodeBlock fcb)
@@ -1003,6 +1004,7 @@ namespace Microsoft.PowerShell.PlatyPS
 
             int currentIndex = startIndex;
 
+            // Read until we get to our next level 2 header (the end of the parameters)
             while(currentIndex < nextHeaderLevel2)
             {
                 var parameterItemIndex = GetNextHeaderIndex(md, expectedHeaderLevel: 3, startIndex: currentIndex);
@@ -1041,11 +1043,10 @@ namespace Microsoft.PowerShell.PlatyPS
                     continue;
                 }
 
+                // Get the next yaml block as it has all the parameter metadata
                 var yamlBlockIndex = GetNextCodeBlock(md, parameterItemIndex, "yaml");
-                string description = GetParameterDescription(markdownContent, parameterItemIndex + 1, yamlBlockIndex);
-
+                string description = GetParameterDescription(markdownContent, parameterItemIndex + 1, yamlBlockIndex).Trim();
                 var paramYamlBlock = GetParameterYamlBlock(md, parameterItemIndex + 1, language: "yaml");
-                Dictionary<string, object> yamlDict;
 
                 if (paramYamlBlock != null)
                 {
@@ -1054,27 +1055,43 @@ namespace Microsoft.PowerShell.PlatyPS
                     // yaml does not allow '*' to start a value, so we need to change this to be (all).
                     // yamlBlock = yamlBlock.Replace("* (all)","\"(all)\"");
 
-                    StringReader stringReader = new StringReader(yamlBlock);
-                    var deserializer = new YamlDotNet.Serialization.DeserializerBuilder().Build();
-                    try
+                    if (ParameterMetadataV2.TryConvertToV2(yamlBlock, out var v2))
                     {
-                        var yamlObject = deserializer.Deserialize(stringReader);
-                        yamlDict = parseYamlBlock(yamlObject);
+                        parameters.Add(new Parameter(parameterName, description, v2));
                     }
-                    catch (Exception e) // Deserialize can fail, if it does we will need to parse the yaml block manually.
+                    else if (ParameterMetadataV1.TryConvertToV1(yamlBlock, out var v1))
                     {
-                        AddParseError(parameterName, e.Message, md[parameterItemIndex].Line);
-                        diagnostics.Add(
-                            new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Error, "YAML Parse Failure", md[parameterItemIndex].Line + 1)
-                        );
-                        yamlDict = new Dictionary<string, object>();
+                        parameters.Add(Parameter.ConvertV1ParameterToV2(parameterName, description, v1));
+                    }
+                    else // Last ditch effort - turn it into a dictionary
+                    {
+                        StringReader stringReader = new StringReader(yamlBlock);
+                        var deserializer = new YamlDotNet.Serialization.DeserializerBuilder().Build();
+                        try
+                        {
+                            var yamlObject = deserializer.Deserialize(stringReader);
+                            var yamlDict = parseYamlBlock(yamlObject);
+                            parameters.Add(Parameter.ConvertDictionaryToV2(parameterName, description, yamlDict));
+                        }
+                        catch (Exception e) // Deserialize can fail, if it does we will need to parse the yaml block manually.
+                        {
+                            AddParseError(parameterName, e.Message, md[parameterItemIndex].Line);
+                            diagnostics.Add(
+                                new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Error, "YAML Parse Failure", md[parameterItemIndex].Line + 1)
+                            );
+                        }
                     }
                 }
                 else
                 {
-                    yamlDict = new Dictionary<string, object>();
+                    AddParseError(parameterName, "No valid yaml found", md[parameterItemIndex].Line);
+                    diagnostics.Add(
+                        new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Error, "YAML Parse Failure", md[parameterItemIndex].Line + 1)
+                    );
                 }
 
+
+// JWT
                 string typeAsString = string.Empty;
                 if (yamlDict.TryGetValue("Type", out object type))
                 {
@@ -1172,6 +1189,13 @@ namespace Microsoft.PowerShell.PlatyPS
             }
 
             return parameters;
+        }
+
+        private static Parameter GetParameterFromV2ParameterMetadata(string name, ParameterMetadataV2 v2)
+        {
+            var parameter = new Parameter(name, v2.Type);
+
+            return parameter;
         }
 
         private static Regex newPipelineInfoFormat = new Regex(@"ByName \((?<n>False|True)\), ByValue \((?<v>False|True)\)");

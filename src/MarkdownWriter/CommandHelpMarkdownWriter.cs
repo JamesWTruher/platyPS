@@ -138,6 +138,14 @@ namespace Microsoft.PowerShell.PlatyPS.MarkdownWriter
             {
                 foreach (Parameter param in help.Parameters)
                 {
+                    ParameterMetadataV2 v2 = param.GetMetadata();
+
+                    sb.AppendLine(string.Format("### -{0}", param.Name));
+                    sb.AppendLine();
+                    sb.AppendLine(param.Description);
+                    sb.AppendLine();
+                    sb.AppendLine(v2.ToYamlString());
+                    /*
                     string paramString = "PLACEHOLDER"; // JWT param.ToParameterString(Constants.mdParameterYamlBlockWithAcceptedValues);
 
                     if (!string.IsNullOrEmpty(paramString))
@@ -145,6 +153,7 @@ namespace Microsoft.PowerShell.PlatyPS.MarkdownWriter
                         sb.AppendLine(paramString);
                         sb.AppendLine();
                     }
+                    */
                 }
             }
 

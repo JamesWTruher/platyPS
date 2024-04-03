@@ -189,6 +189,15 @@ namespace Microsoft.PowerShell.PlatyPS
                 {
                     var settings = new CommandHelpWriterSettings(Encoding, $"{fullPath}{Constants.DirectorySeparator}{cmdletHelp.Title}.md");
                     using var cmdWrt = new CommandHelpMarkdownWriter(settings);
+                    if (Metadata is null && ! NoMetadata)
+                    {
+                        Metadata = GetBaseMetadata(cmdletHelp.Title, cmdletHelp.ModuleName, cmdletHelp.Locale);
+                    }
+                    else
+                    {
+                        
+                    }
+
                     WriteObject(this.InvokeProvider.Item.Get(cmdWrt.Write(cmdletHelp, Metadata).FullName));
                 }
 
@@ -205,6 +214,20 @@ namespace Microsoft.PowerShell.PlatyPS
                 }
             }
         }
+
+        static Hashtable GetBaseMetadata(string commandName, string moduleName, CultureInfo locale)
+        {
+            var metadata = new Hashtable();
+            metadata.Add("title", commandName);
+            metadata.Add("Module Name", moduleName);
+            metadata.Add("Locale", locale.Name);
+            metadata.Add("schema", "3.0.0");
+            metadata.Add("online version", "");
+            metadata.Add("ms.date", DateTime.Now.ToString("MM/dd/yyyy"));
+            metadata.Add("external help file", $"{moduleName}.dll-Help.xml");
+            return metadata;
+        }
+
     }
 }
 

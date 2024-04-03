@@ -160,9 +160,8 @@ namespace Microsoft.PowerShell.PlatyPS
 			return false;
 		}
 
-        public static bool TryConvertToV1(string yaml, out ParameterMetadataV1? v1)
+        public static bool TryConvertToV1(string yaml, out ParameterMetadataV1 v1)
         {
-            v1 = null;
             try
             {
                 var result = new DeserializerBuilder().Build().Deserialize<ParameterMetadataV1>(yaml);
@@ -174,6 +173,7 @@ namespace Microsoft.PowerShell.PlatyPS
                 ; // do nothing we couldn't parse the yaml, and we'll return false.
             }
 
+            v1 = new ParameterMetadataV1();
             return false;
         }
 

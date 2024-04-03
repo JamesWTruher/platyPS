@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Linq;
 
 namespace Microsoft.PowerShell.PlatyPS.Model
@@ -92,6 +93,94 @@ namespace Microsoft.PowerShell.PlatyPS.Model
         {
             AcceptedValues ??= new List<string>();
             AcceptedValues.AddRange(values);
+        }
+
+        public Parameter(string name, string description, ParameterMetadataV2 metadata)
+        {
+            Name = name;
+            Type = metadata.Type;
+            Description = description;
+            VariableLength = metadata.VariableLength;
+            DefaultValue = metadata.DefaultValue;
+            Globbing = metadata.Globbing;
+            Aliases = string.Join(",", metadata.Aliases);
+            DontShow = metadata.DontShow;
+            AcceptedValues = metadata.AcceptedValues;
+            HelpMessage = metadata.HelpMessage;
+            ParameterValue = metadata.ParameterValue;
+            VariableLength = metadata.VariableLength;
+            DefaultValue = metadata.DefaultValue;
+
+            ParameterSets = new();
+            foreach(var parameterSet in metadata.ParameterSets)
+            {
+                ParameterSets.Add(
+                    new ParameterSet()
+                    {
+                        Name = parameterSet.Name,
+                        Position = parameterSet.Position,
+                        IsRequired = parameterSet.IsRequired,
+                        ValueByPipeline = parameterSet.ValueByPipeline,
+                        ValueByPipelineByPropertyName = parameterSet.ValueByPipelineByPropertyName,
+                        ValueFromRemainingArguments = parameterSet.ValueFromRemainingArguments
+                    }
+                );
+            }
+        }
+
+        public static Parameter ConvertV1ParameterToV2(string name, string description, ParameterMetadataV1 V1metadata)
+        {
+            if (V1metadata.TryConvertMetadataToV2(out var metadata))
+            {
+                return new Parameter(name, description, metadata);
+            }
+            else
+            {
+                throw new InvalidOperationException("Could not convert to v2");
+            }
+        }
+
+        public ParameterMetadataV2 GetMetadata()
+        {
+            var metadata = new ParameterMetadataV2();
+            metadata.Type = Type;
+            metadata.VariableLength = VariableLength;
+            metadata.Globbing = Globbing;
+
+            if (DefaultValue is not null)
+            {
+                metadata.DefaultValue = DefaultValue;
+            }
+
+            if (! string.IsNullOrEmpty(Aliases))
+            {
+                var aliases = Aliases?.Split(Constants.Comma, StringSplitOptions.RemoveEmptyEntries);
+                if (aliases is not null)
+                    {
+                    foreach(var alias in aliases)
+                    {
+                        metadata.Aliases.Add(alias.Trim());
+                    }
+                }
+            }
+
+            if (ParameterValue is not null && ParameterValue.Count > 0)
+            {
+                metadata.ParameterValue = ParameterValue;
+            }
+
+            foreach(var paramSet in ParameterSets)
+            {
+                var pSet = new ParameterSetV2();
+                pSet.Name = string.Compare(paramSet.Name, "__AllParameterSets", true) == 0 ? "(All)" : paramSet.Name;
+                pSet.Position = paramSet.Position;
+                pSet.IsRequired = paramSet.IsRequired;
+                pSet.ValueByPipeline = paramSet.ValueByPipeline;
+                pSet.ValueByPipelineByPropertyName = paramSet.ValueByPipelineByPropertyName;
+                pSet.ValueFromRemainingArguments = paramSet.ValueFromRemainingArguments;
+                metadata.ParameterSets.Add(pSet);
+            }
+            return metadata;
         }
 
         /*

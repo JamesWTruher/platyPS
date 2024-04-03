@@ -294,9 +294,10 @@ Write-Host 'Hello World!'
         }
 
         $file = New-MarkdownHelp -Command Test-PlatyPSFunction -OutputFolder "$TestDrive/testAll1" -Force
-        $content = Get-Content $file
+        $content = Import-MarkdownCommandHelp $file
 
         It 'generates markdown with correct parameter set names' {
+            wait-debugger
             $content | Where-Object {$_ -eq 'Parameter Sets: (All)'} | Should -HaveCount 1
             $content | Where-Object {$_ -eq 'Parameter Sets: First'} | Should -HaveCount 1
             $content | Where-Object {$_ -eq 'Parameter Sets: Second'} | Should -HaveCount 1
