@@ -3,28 +3,44 @@
 
 
 $modRoot = (Get-Module PlatyPS).ModuleBase
+$modRoot = "/Users/james/src/github/forks/jameswtruher/platyPS/out/platyPS"
 $depRoot = Join-Path $modRoot "Dependencies"
 $markDigAsm = Join-Path $depRoot "Markdig.Signed.dll"
 $yamlDotNetAsm = Join-Path $depRoot "YamlDotNet.dll"
 # debugging
-Get-ChildItem -Recurse $modRoot -File | Foreach-Object { $_ | Write-Verbose -Verbose }
-$null = import-Module $markDigAsm -ErrorAction SilentlyContinue
-$null = import-Module $yamlDotNetAsm -ErrorAction SilentlyContinue
+#Get-ChildItem -Recurse $modRoot -File | Foreach-Object { $_ | Write-Verbose -Verbose }
+#$null = import-Module $markDigAsm -ErrorAction SilentlyContinue
+#$null = import-Module $yamlDotNetAsm -ErrorAction SilentlyContinue
+Add-Type -Assembly $markDigAsm
+Add-Type -Assembly $yamlDotNetAsm
 
 class inputOutput {
     [string]$name
     [string]$description
 }
 
-class parameter {
+class parameterSet {
     [string]$name
+    [string]$position
+    [bool]$isRequired
+    [bool]$valueByPipeline
+    [bool]$valueByPipelineByPropertyName
+    [bool]$valueFromRemainingArguments
+}
+
+class parameter {
+    [string]$Name
     [string]$type
     [string]$description
+    [string[]]$parameterValue
     [string]$defaultValue
-    [string]$pipelineInput
-    [string]$position
+    [bool]$variableLength
+    [bool]$globbing
     [string]$aliases
-    [string]$parameterValueGroup
+    [bool]$dontShow
+    [string[]]$acceptedValues
+    [string]$helpMessage
+    [parameterSet[]]$parameterSets
 }
 
 class example {

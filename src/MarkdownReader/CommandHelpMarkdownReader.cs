@@ -1,27 +1,21 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Markdig.Extensions.CustomContainers;
+// using Markdig.Extensions.CustomContainers;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
+// using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Microsoft.PowerShell.PlatyPS.MarkdownWriter;
 using Microsoft.PowerShell.PlatyPS.Model;
-using System;
-using System.Collections.Generic;
-using System.Collections;
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
-
-using System.Collections.Specialized;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Drawing.Design;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Management.Automation.Language;
+// using System.Management.Automation.Language;
 
 namespace Microsoft.PowerShell.PlatyPS
 {
@@ -89,14 +83,31 @@ namespace Microsoft.PowerShell.PlatyPS
             return ValidateMarkdown(md.Ast, out Issues);
         }
 
+        /// <summary>
+        /// Captures whether there were errors found during the parsing.
+        /// </summary>
         public static bool HadErrors { get; private set; } = false;
+
+        /// <summary>
+        /// The collection of parsing errors.
+        /// </summary>
         public static List<ParseError> ParseErrors { get; private set; } = new List<ParseError>();
+
+        /// <summary>
+        /// Add an error to the collection.
+        /// </summary>
+        /// <param name="context">Information about the context where the error occurred.</param>
+        /// <param name="message">A message to further elaborate on the error.</param>
+        /// <param name="line">The line which caused the parsing error.</param>
         public static void AddParseError(string context, string message, int line = -1)
         {
             ParseErrors.Add(new ParseError(context, message, line));
             HadErrors = true;
         }
 
+        /// <summary>
+        /// Clear the error collection.
+        /// </summary>
         public static void ClearParseErrors()
         {
             ParseErrors.Clear();
@@ -153,7 +164,7 @@ namespace Microsoft.PowerShell.PlatyPS
                 "schema",
                 "title"
             };
-            
+
             foreach(var key in requiredKeys)
             {
                 if (metadata.Contains(key))
@@ -402,7 +413,7 @@ namespace Microsoft.PowerShell.PlatyPS
 
             markdownContent.Take();
             var noteContent = markdownContent.GetStringFromAst(end);
-            var dm2 = new DiagnosticMessage(DiagnosticMessageSource.Notes, "Notes content not found", DiagnosticSeverity.Information, $"Notes length = {noteContent.Length}", markdownContent.GetTextLine(start));
+            var dm2 = new DiagnosticMessage(DiagnosticMessageSource.Notes, "Notes content found", DiagnosticSeverity.Information, $"Notes length = {noteContent.Length}", markdownContent.GetTextLine(start));
             diagnostics.Add(dm2);
             return noteContent;
         }
@@ -1057,58 +1068,84 @@ namespace Microsoft.PowerShell.PlatyPS
 
                     if (ParameterMetadataV2.TryConvertToV2(yamlBlock, out var v2))
                     {
+                        diagnostics.Add(
+                            new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Information, "Version 2 metadata found", md[parameterItemIndex].Line + 1)
+                        );
                         parameters.Add(new Parameter(parameterName, description, v2));
                     }
                     else if (ParameterMetadataV1.TryConvertToV1(yamlBlock, out var v1))
                     {
+                        diagnostics.Add(
+                            new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Information, "Version 1 metadata found", md[parameterItemIndex].Line + 1)
+                        );
                         parameters.Add(Parameter.ConvertV1ParameterToV2(parameterName, description, v1));
                     }
-                    else // Last ditch effort - turn it into a dictionary
+                    else if (YamlUtils.TryConvertYamlToDictionary(yamlBlock, out var yamlDict))
                     {
-                        StringReader stringReader = new StringReader(yamlBlock);
-                        var deserializer = new YamlDotNet.Serialization.DeserializerBuilder().Build();
-                        try
+                        // Last ditch effort - try a dictionary
+                        AddParseError(parameterName, "YAML may have illegal elements, trying last chance", paramYamlBlock.Line);
+                        if (YamlUtils.TryLastChance(yamlBlock, out var lastChance))
                         {
-                            var yamlObject = deserializer.Deserialize(stringReader);
-                            var yamlDict = parseYamlBlock(yamlObject);
-                            parameters.Add(Parameter.ConvertDictionaryToV2(parameterName, description, yamlDict));
-                        }
-                        catch (Exception e) // Deserialize can fail, if it does we will need to parse the yaml block manually.
-                        {
-                            AddParseError(parameterName, e.Message, md[parameterItemIndex].Line);
                             diagnostics.Add(
-                                new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Error, "YAML Parse Failure", md[parameterItemIndex].Line + 1)
+                                new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Information, "found in LastChance parse", md[parameterItemIndex].Line + 1)
                             );
+                                parameters.Add(new Parameter(parameterName, description, lastChance));
+                            }
                         }
+                        else
+                        {
+                            AddParseError(parameterName, "YAML was not v1 or v2 shape", md[parameterItemIndex].Line);
+                        diagnostics.Add(
+                            new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Error, "YAML Parse Failure", md[parameterItemIndex].Line + 1)
+                        );
                     }
                 }
-                else
-                {
-                    AddParseError(parameterName, "No valid yaml found", md[parameterItemIndex].Line);
-                    diagnostics.Add(
-                        new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Error, "YAML Parse Failure", md[parameterItemIndex].Line + 1)
-                    );
-                }
 
+                currentIndex = parameterItemIndex + 1;
+            }
 
-// JWT
-                string typeAsString = string.Empty;
-                if (yamlDict.TryGetValue("Type", out object type))
-                {
-                    typeAsString = type.ToString();
-                }
+            return parameters;
+        }
 
-                Parameter parameter = new Parameter(parameterName, typeAsString.Trim());
-                diagnostics.Add(
-                        new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Information, "GetParameters", md[parameterItemIndex].Line)
-                    );
+        private static Parameter GetParameterFromV2ParameterMetadata(string name, ParameterMetadataV2 v2)
+        {
+            var parameter = new Parameter(name, v2.Type);
 
-                // Version 1 style
-                string positionAsString = string.Empty;
-                if (yamlDict.TryGetValue("Position", out object position))
-                {
-                    positionAsString = position.ToString();
-                }
+            return parameter;
+        }
+
+        /*
+        // Attempt to convert a dictionary
+        private static Parameter? ConvertToParameter(string parameterName, string description, string yamlBlock)
+        {
+            StringReader stringReader = new StringReader(yamlBlock);
+            var deserializer = new YamlDotNet.Serialization.DeserializerBuilder().Build();
+            Dictionary <string, Object> yamlDict;
+
+            try
+            {
+                var yamlObject = deserializer.Deserialize(stringReader);
+                yamlDict = parseYamlBlock(yamlObject);
+            }
+            catch (Exception e) // Deserialize can fail, if it does we will need to parse the yaml block manually.
+            {
+                throw e;
+            }
+
+            string typeAsString = string.Empty;
+            if (yamlDict.TryGetValue("Type", out object type))
+            {
+                typeAsString = type.ToString();
+            }
+
+            Parameter parameter = new Parameter(parameterName, typeAsString.Trim());
+            // diagnostics.Add( new DiagnosticMessage(DiagnosticMessageSource.Parameter, $"{parameterName} found", DiagnosticSeverity.Information, "GetParameters", md[parameterItemIndex].Line));
+
+            string positionAsString = string.Empty;
+            if (yamlDict.TryGetValue("Position", out object position))
+            {
+                positionAsString = position.ToString();
+            }
 
                 // Old Style - V1 output
                 string parameterSetsAsString = string.Empty;
@@ -1169,8 +1206,6 @@ namespace Microsoft.PowerShell.PlatyPS
                 }
                 parameter.DefaultValue = defaultValuesAsString;
 
-                /*
-                JWT
                 if (yamlDict.TryGetValue("Accept pipeline input", out string acceptedPipelineAsString))
                 {
                     parameter.PipelineInput = GetPipelineInputInfoFromString(acceptedPipelineAsString); //new PipelineInputInfo(string.Equals(acceptedPipelineAsString.Trim(), Constants.TrueString, StringComparison.OrdinalIgnoreCase));
@@ -1181,22 +1216,11 @@ namespace Microsoft.PowerShell.PlatyPS
                     parameter.Globbing = string.Equals(acceptWildCardAsString.Trim(), Constants.TrueString, StringComparison.OrdinalIgnoreCase);
 
                 }
-                */
 
-                parameter.Description = description.Trim();
-                parameters.Add(parameter);
-                currentIndex = parameterItemIndex + 1;
-            }
-
-            return parameters;
-        }
-
-        private static Parameter GetParameterFromV2ParameterMetadata(string name, ParameterMetadataV2 v2)
-        {
-            var parameter = new Parameter(name, v2.Type);
 
             return parameter;
         }
+        */
 
         private static Regex newPipelineInfoFormat = new Regex(@"ByName \((?<n>False|True)\), ByValue \((?<v>False|True)\)");
         private static PipelineInputInfo GetPipelineInputInfoFromString(string acceptedPipelineAsString)
@@ -1712,7 +1736,7 @@ namespace Microsoft.PowerShell.PlatyPS
                 return Ast[offset].Line + 1; // internally, we are 0 based
             }
         }
-    
+
         public bool IsEmptyHeader(int Level)
         {
             var currentHeader = Ast[CurrentIndex] as HeadingBlock;

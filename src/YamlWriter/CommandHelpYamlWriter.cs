@@ -210,9 +210,10 @@ namespace Microsoft.PowerShell.PlatyPS.YamlWriter
 
             if (help.Parameters?.Count > 0)
             {
+                sb.AppendLine(YamlUtils.SerializeElement(help.Parameters));
+                    /*
                 foreach (Parameter param in help.Parameters)
                 {
-                    /*
                     The metadata that we write out for each parameter is:
                     name
                     type
@@ -222,7 +223,6 @@ namespace Microsoft.PowerShell.PlatyPS.YamlWriter
                     position (as string)
                     aliases
                     parameterValueGroup
-                    */
                     sb.AppendLine(string.Format("- name: {0}", param.Name));
                     sb.AppendLine(string.Format("  type: {0}", param.Type));
                     sb.AppendLine("  description: |+");
@@ -240,6 +240,7 @@ namespace Microsoft.PowerShell.PlatyPS.YamlWriter
                     sb.AppendLine(string.Format("  aliases: {0}", param.Aliases));
                     sb.AppendLine(string.Format("  parameterValueGroup: \"{0}\"", string.Empty)); // ????
                 }
+                    */
 
                 if (help.HasCmdletBinding)
                 {

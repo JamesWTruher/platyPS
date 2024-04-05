@@ -13,10 +13,13 @@ namespace Microsoft.PowerShell.PlatyPS.Model
     /// </summary>
     public class Parameter : IEquatable<Parameter>
     {
-        public string? Description { get; set;}
         public string Name { get; set;}
-        public List<string>? ParameterValue { get; set;}
+
         public string Type { get; set;}
+
+        public string? Description { get; set;}
+
+        public List<string>? ParameterValue { get; set;}
 
         public string? DefaultValue { get; set;}
 
@@ -30,10 +33,11 @@ namespace Microsoft.PowerShell.PlatyPS.Model
 
         public string? Aliases { get; set;}
 
-        public List<ParameterSet> ParameterSets { get; set; }
         public bool DontShow { get; set;}
 
         public List<string>? AcceptedValues { get; private set; }
+
+        public List<ParameterSet> ParameterSets { get; set; }
 
         public string? HelpMessage { get; set; }
 
@@ -146,6 +150,11 @@ namespace Microsoft.PowerShell.PlatyPS.Model
             metadata.Type = Type;
             metadata.VariableLength = VariableLength;
             metadata.Globbing = Globbing;
+
+            if (AcceptedValues is not null && AcceptedValues.Count > 0)
+            {
+                metadata.AcceptedValues = AcceptedValues;
+            }
 
             if (DefaultValue is not null)
             {

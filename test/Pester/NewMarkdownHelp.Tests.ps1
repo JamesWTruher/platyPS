@@ -297,31 +297,31 @@ Write-Host 'Hello World!'
         $content = Import-MarkdownCommandHelp $file
 
         It 'generates markdown with correct parameter set names' {
-            wait-debugger
-            $content | Where-Object {$_ -eq 'Parameter Sets: (All)'} | Should -HaveCount 1
-            $content | Where-Object {$_ -eq 'Parameter Sets: First'} | Should -HaveCount 1
-            $content | Where-Object {$_ -eq 'Parameter Sets: Second'} | Should -HaveCount 1
+            $content.Parameters.ParameterSets.Count | Should -Be 3
+            $content.Parameters[0].ParameterSets[0].Name | Should -Be "(All)"
+            $content.Parameters[1].ParameterSets[0].Name | Should -Be "First"
+            $content.Parameters[2].ParameterSets[0].Name | Should -Be "Second"
         }
 
         It 'generates markdown with correct synopsis' {
-            $content | Where-Object {$_ -eq 'Adds a file name extension to a supplied name.'} | Should -HaveCount 2
+            $content.Synopsis | Should -Be "Adds a file name extension to a supplied name."
         }
 
         It 'generates markdown with correct help description specified by HelpMessage attribute' {
-            $content | Where-Object {$_ -eq 'First parameter help description'} | Should -HaveCount 1
+            $content.Parameters.Where({$_.Name -eq "First"}).Description | Should -Be "First parameter help description"
         }
 
         It 'generates markdown with correct help description specified by comment-based help' {
-            $content | Where-Object {$_ -eq 'Second parameter help description'} | Should -HaveCount 1
+            $content.Parameters.Where({$_.Name -eq "Second"}).Description | Should -Be "Second parameter help description"
         }
 
         It 'generates markdown with placeholder for parameter with no description' {
-            $expectedString = '{{{{ Fill {0} Description }}}}' -f 'Common'
-            $content | Where-Object {$_ -eq $expectedString} | Should -HaveCount 1
+            $expectedString = "{{ Fill Common Description }}"
+            $content.Parameters.Where({$_.Name -eq "Common"}).Description | Should -Be $expectedString
         }
 
         It 'Description can contain multiple code blocks and text' {
-            
+            set-itresult -pending -because "test unimplemented"
         }
     }
 
@@ -574,7 +574,7 @@ Get-Alpha [-WhatIf] [[-CCC] <String>] [[-ddd] <Int32>] [<CommonParameters>]
         }
 
         It 'sets accepts wildcards property on parameters as expected' {
-            $file | Should -FileContentMatch 'Accept wildcard characters: True'
+            $file | Should -FileContentMatch 'Globbing: true'
         }
     }
 }

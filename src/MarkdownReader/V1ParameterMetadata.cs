@@ -11,18 +11,44 @@ using Microsoft.PowerShell.PlatyPS.Model;
 
 namespace Microsoft.PowerShell.PlatyPS
 {
+    /// <summary>
+    /// This is needed to manage some of the Required yaml
+    /// which includes property set information with the state of required.
+    /// </summary>
+    public class RequiredWithParameterSetName
+    {
+        public string ParameterSetName = string.Empty;
+        public bool Required;
+
+        public RequiredWithParameterSetName(string name, bool required)
+        {
+            ParameterSetName = name;
+            Required = required;
+        }
+    }
+
     public class ParameterMetadataV1
     {
 		public string Type { get; set; } = string.Empty;
 		[YamlMember(Alias = "Parameter Sets")]
+
 		public string ParameterSets { get; set; } = string.Empty;
+
 		public string Aliases { get; set; } = string.Empty;
-		public bool Required { get; set; }
+
+		public string Required { get; set; } = string.Empty;
+
+		[YamlMember(Alias = "Accepted values")]
+        public string AcceptedValues { get; set; } = string.Empty;
+
 		public string Position { get; set; } = string.Empty;
+
 		[YamlMember(Alias = "Default value")]
 		public string DefaultValue { get; set; } = string.Empty;
+
         [YamlMember(Alias = "Accept pipeline input")]
         public string AcceptPipelineInput { get; set; } = string.Empty;
+
 		[YamlMember(Alias = "Accept wildcard characters")]
 		public bool AcceptWildcardCharacters { get; set; }
 
@@ -39,6 +65,70 @@ namespace Microsoft.PowerShell.PlatyPS
                 l.Add(p.Trim());
             }
             return l.ToArray();
+        }
+
+        public bool TryGetRequiredAsBool(out bool value)
+        {
+            if (bool.TryParse(Required, out var result))
+            {
+                value = result;
+                return true;
+            }
+
+            value = false;
+            return false;
+        }
+
+        public static Regex RequiredTruePattern = new Regex(@"True \((.[^\)]+)\)", RegexOptions.IgnoreCase);
+        public List<string> GetRequiredParameterSets()
+        {
+            List<string> l = new();
+
+            var trueMatch = RequiredTruePattern.Match(Required);
+            if (trueMatch.Success)
+            {
+                string foundParameterSets = trueMatch.Groups[1].Value.Trim();
+                if (! string.IsNullOrEmpty(foundParameterSets))
+                {
+                    foreach(var parameterSet in foundParameterSets.Split(Constants.Comma, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        var pSetName = parameterSet.Trim();
+                        if (! string.IsNullOrEmpty(pSetName))
+                        {
+                            l.Add(pSetName);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                l.Add(Constants.ParameterSetsAll);
+            }
+
+            return l;
+        }
+
+        // Get the list of accepted values.
+        // note we might read an string of spaces, so we need to trim
+        // and then return non-empty strings.
+        public List<string> GetAcceptedValues()
+        {
+            List<string> l = new();
+            if (AcceptedValues is null)
+            {
+                return l;
+            }
+
+            foreach(string v in AcceptedValues.Split(Constants.Comma))
+            {
+                var trimmedValue = v.Trim();
+                if (! string.IsNullOrEmpty(trimmedValue))
+                {
+                    l.Add(trimmedValue);
+                }
+            }
+
+            return l;
         }
 
         public bool ParameterSetIncludes(string name)
@@ -185,12 +275,23 @@ namespace Microsoft.PowerShell.PlatyPS
 			result.Globbing = AcceptWildcardCharacters;
 			result.Aliases.AddRange(GetAliases());
 			result.DontShow = false;
+            result.AcceptedValues = GetAcceptedValues();
 			foreach(var pSetName in GetParameterSetList())
 			{
 				var pSetV2 = new ParameterSetV2(pSetName, Position);
 				pSetV2.ValueByPipeline = GetByValue(AcceptPipelineInput);
 				pSetV2.ValueByPipelineByPropertyName = GetByProperty(AcceptPipelineInput);
-				pSetV2.IsRequired = Required;
+                if (TryGetRequiredAsBool(out var required))
+                {
+                    pSetV2.IsRequired = required;
+                }
+                else
+                {
+                    if(GetRequiredParameterSets().Any(p => string.Compare(p, pSetName) == 0))
+                    {
+                        pSetV2.IsRequired = true;
+                    }
+                }
 				result.ParameterSets.Add(pSetV2);
 			}
 
@@ -205,6 +306,17 @@ namespace Microsoft.PowerShell.PlatyPS
 			sb.Append(new SerializerBuilder().Build().Serialize(this));
 			sb.AppendLine("```");
 			return sb.ToString();
+        }
+
+        /// <summary>
+        /// The last ditch effort for converting a dictionary to a metadata object
+        /// </summary>
+        /// <param name="dict"></param>
+        /// <returns></returns>
+        public static ParameterMetadataV1 ConvertDictionaryToParameterMetadataV1(Dictionary<string, string>dict)
+        {
+            ParameterMetadataV1 metadata = new ();
+            return metadata; 
         }
     }
 }

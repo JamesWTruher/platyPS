@@ -47,6 +47,7 @@ Describe "Create valid yaml" {
             $result.GetType().Name | Should -Be "Ch"
         }
         catch {
+            wait-debugger
             $_.Exception.Message | Should -BeNullOrEmpty
         }
     }
