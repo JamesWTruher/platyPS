@@ -125,15 +125,6 @@ namespace Microsoft.PowerShell.PlatyPS
                     pSet.ValueFromRemainingArguments = metadata.ValueFromRemainingArguments;
                     param.ParameterSets.Add(pSet);
                 }
-                /*
-                JWT
-                foreach (KeyValuePair<string, ParameterSetMetadata> paramSet in parameterMetadata.Value.ParameterSets)
-                {
-                    string paramSetName = paramSet.Key;
-                    param.AddParameterSet(paramSetName);
-                    param.AddRequiredParameterSets(paramSet.Value.IsMandatory, paramSetName);
-                }
-                */
 
                 param.DefaultValue = GetParameterDefaultValueFromHelp(helpItem, param.Name);
                 param.Aliases = string.Join(",", parameterMetadata.Value.Aliases);

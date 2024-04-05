@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
+using YamlDotNet.Serialization;
 
 namespace Microsoft.PowerShell.PlatyPS.Model
 {
@@ -45,14 +46,17 @@ namespace Microsoft.PowerShell.PlatyPS.Model
 
         public List<InputOutput>? Outputs { get; private set; }
 
-        public List<Links>? RelatedLinks { get; private set; }
-
-        public bool HasCmdletBinding { get; set; }
-
-        public bool HasWorkflowCommonParameters { get; set; }
-
         public string? Notes { get; set; }
 
+        public List<Links>? RelatedLinks { get; private set; }
+
+        [YamlIgnore]
+        public bool HasCmdletBinding { get; set; }
+
+        [YamlIgnore]
+        public bool HasWorkflowCommonParameters { get; set; }
+
+        [YamlIgnore]
         public Diagnostics Diagnostics { get; set; }
 
         internal Dictionary<string, SyntaxItem> SyntaxDictionary { get; private set; }

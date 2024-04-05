@@ -8,6 +8,7 @@ using Microsoft.PowerShell.PlatyPS;
 using Microsoft.PowerShell.PlatyPS.Model;
 using YamlDotNet;
 using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace Microsoft.PowerShell.PlatyPS
 {
@@ -17,7 +18,7 @@ namespace Microsoft.PowerShell.PlatyPS
     internal class YamlUtils
     {
         private static Deserializer deserializer = (Deserializer)new DeserializerBuilder().Build();
-        private static Serializer serializer = (Serializer)new SerializerBuilder().Build();
+        private static Serializer serializer = (Serializer)new SerializerBuilder().WithNamingConvention(CamelCaseNamingConvention.Instance).Build();
 
 
         /// <summary>

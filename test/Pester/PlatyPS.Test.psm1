@@ -29,7 +29,7 @@ class parameterSet {
 }
 
 class parameter {
-    [string]$Name
+    [string]$name
     [string]$type
     [string]$description
     [string[]]$parameterValue
@@ -93,9 +93,9 @@ class ch {
 
 # we need to call the generic deserialize method, so we need to build it.
 $builderType = "YamlDotNet.Serialization.DeserializerBuilder" -as [type]
-$script:yamldes = $builderType::new().Build()
+$script:yamldes = $builderType::new().WithNamingConvention([YamlDotnet.Serialization.NamingConventions.CamelCaseNamingConvention]::new()).Build()
 [type[]]$tlist = @( [string] )
-$script:YamlDeserializeMethod = $yamldes.GetType().GetMethod("Deserialize", $tlist).MakeGenericMethod([ch])
+$script:YamlDeserializeMethod = $yamldes.GetType().GetMethod("Deserialize", $tlist).MakeGenericMethod([hashtable])
 
 function Import-CommandYaml  {
     [CmdletBinding()]
@@ -111,8 +111,8 @@ function Import-CommandYaml  {
                 $result = $YamlDeserializeMethod.Invoke($yamldes, $yaml)
                 # fix up some of the object elements
                 $null = $result.parameters.where({$_.name -eq "CommonParameters"}).Foreach({$result.parameters.Remove($_); $result.HasCmdletBinding = $true})
-                $result.Locale = $result.Metadata['Locale'] ?? "en-US"
-                $result.ExternalHelpfile = $result.Metadata['external help file']
+                $result.Locale = $result['metadata']['Locale'] ?? "en-US"
+                $result.ExternalHelpfile = $result['metadata']['external help file']
                 $result
             }
             catch {

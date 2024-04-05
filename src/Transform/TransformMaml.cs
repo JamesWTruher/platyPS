@@ -542,26 +542,6 @@ namespace Microsoft.PowerShell.PlatyPS
                 reader.ReadEndElement();
             }
 
-            // Update parameter.ParameterSets only if we are reading for parameters. Not for syntax.
-            /*
-            JWT
-            if (parameterSetCount != -1)
-            {
-                if (_paramSetMap.TryGetValue(name, out List<string>? paramSetList))
-                {
-                    if (paramSetList is not null)
-                    {
-                        // If the parameter is in all parameter sets then dont add.
-                        // This ensures it is marked as present in all parameter sets.
-                        if (paramSetList is not null && paramSetList.Count != parameterSetCount)
-                        {
-                            parameter.AddParameterSetsRange(paramSetList);
-                        }
-                    }
-                }
-            }
-            */
-
             return parameter;
         }
 
