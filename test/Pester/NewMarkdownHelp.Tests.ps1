@@ -13,6 +13,8 @@ Describe 'New-MarkdownHelp' {
             aliases = "testalias"
             schema = "2.0.0"
         }
+
+        $commonParameterNames = [System.Management.Automation.Internal.CommonParameters].GetProperties().ForEach({$_.Name})
     }
 
     Context 'errors' {
@@ -161,6 +163,36 @@ Describe 'New-MarkdownHelp' {
             $files = New-MarkdownHelp -Command @('New-MarkdownHelp', 'Get-MarkdownMetadata') -OutputFolder "$TestDrive/commands" -Force
             $files | Should -HaveCount 2
         }
+
+        It 'creates the proper content from a command' {
+            $files = New-MarkdownHelp -Command 'Get-Date' -OutputFolder "$TestDrive/commands" -Force
+        }
+    }
+
+    Context 'Command content from command' {
+        BeforeAll {
+            $file = New-MarkdownHelp -Command 'Get-Date' -OutputFolder "$TestDrive/commands" -Force
+            $helpInfo = Import-MarkdownCommandHelp $file
+            $cmdInfo = Get-Command Get-Date
+        }
+
+        It 'Should have the proper number of syntax entries' {
+            $syntaxCount = $cmdInfo.Definition.Split([environment]::newline).Where({$_}).Count
+            $helpInfo.Syntax.Count | Should -Be $syntaxCount
+        }
+
+        It 'Should have the correct module name' {
+            $helpInfo.ModuleName | Should -Be $cmdInfo.Source
+        }
+
+        It 'Should have identified the correct default parameter set name' {
+            $helpInfo.Syntax.Where({$_.IsDefaultParameterSet}).ParameterSetName | Should -Be $cmdInfo.DefaultParameterSet
+        }
+
+        It 'Should have identified an alias for the "Date" parameter' {
+            $helpInfo.Parameters.Where({$_.name -eq "Date"}).Aliases | Should -Be ($cmdInfo.Parameters['Date'].Aliases)
+        }
+
     }
 
     Context 'from external script' {
