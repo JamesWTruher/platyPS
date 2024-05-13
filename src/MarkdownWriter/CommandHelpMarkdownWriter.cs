@@ -4,7 +4,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Microsoft.PowerShell.PlatyPS;
 using Microsoft.PowerShell.PlatyPS.Model;
@@ -39,6 +41,7 @@ namespace Microsoft.PowerShell.PlatyPS.MarkdownWriter
         internal override void WriteMetadataHeader(CommandHelp help, Hashtable? metadata = null)
         {
             sb.AppendLine(Constants.MarkdownMetadataHeader);
+#if oldschool
             if (help.Metadata is not null)
             {
                 foreach (DictionaryEntry item in help.Metadata)
@@ -56,6 +59,32 @@ namespace Microsoft.PowerShell.PlatyPS.MarkdownWriter
                     sb.AppendLine();
                 }
             }
+#else
+            if (help.Metadata is null)
+            {
+                help.Metadata = MetadataUtils.GetCommandHelpBaseMetadata(help);
+            }
+
+            if (metadata is not null)
+            {
+                foreach (DictionaryEntry item in metadata)
+                {
+                    if (! MetadataUtils.ProtectedMetadataKeys.Contains(item.Key))
+                    {
+                        help.Metadata[item.Key] = item.Value;
+                    }
+                }
+            }
+
+            var fixedMetadata = MetadataUtils.FixUpCommandHelpMetadata(help.Metadata);
+            help.Metadata.Clear();
+            foreach(DictionaryEntry kv in fixedMetadata)
+            {
+                help.Metadata[kv.Key] = kv.Value;
+            }
+
+            sb.Append(YamlUtils.SerializeElement(help.Metadata));
+#endif
             sb.AppendLine(Constants.MarkdownMetadataHeader);
             sb.AppendLine();
         }

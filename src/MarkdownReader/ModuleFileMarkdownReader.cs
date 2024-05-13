@@ -103,7 +103,7 @@ namespace Microsoft.PowerShell.PlatyPS
 
         public ModuleFileInfo()
         {
-            Metadata = new();
+            Metadata = new() { {"content type", "module" } };
             Title = string.Empty;
             Module = string.Empty;
             Description = string.Empty;
@@ -115,7 +115,7 @@ namespace Microsoft.PowerShell.PlatyPS
 
         public ModuleFileInfo(string title, string moduleName, CultureInfo? locale)
         {
-            Metadata = new();
+            Metadata = new() { {"content type", "module" } };
             Title = title;
             Module = moduleName;
             Description = string.Empty;

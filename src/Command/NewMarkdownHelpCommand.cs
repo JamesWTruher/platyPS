@@ -170,11 +170,7 @@ namespace Microsoft.PowerShell.PlatyPS
                     var settings = new WriterSettings(Encoding, $"{fullPath}{Constants.DirectorySeparator}{cmdletHelp.Title}.md");
                     using var cmdWrt = new CommandHelpMarkdownWriter(settings);
                     var baseMetadata = MetadataUtils.GetCommandHelpBaseMetadata(cmdletHelp);
-                    if (Metadata is null)
-                    {
-                        Metadata = new Hashtable(baseMetadata);
-                    }
-                    else
+                    if (Metadata is not null)
                     {
                         foreach(var metadataKey in baseMetadata.Keys)
                         {
